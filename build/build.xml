@@ -1,0 +1,401 @@
+<project name="AntDeployment" default="retrieveCode" basedir=".." xmlns:sf="antlib:com.salesforce">
+  <!--#############Initialize##########################################-->
+
+  <!--Import external libraries-->
+  <taskdef resource="com/salesforce/antlib.xml" uri="antlib:com.salesforce">
+    <classpath>
+      <pathelement location="lib/ant-salesforce.jar" />
+    </classpath>
+  </taskdef>
+  <taskdef resource="net/sf/antcontrib/antlib.xml">
+    <classpath>
+      <pathelement location="lib/ant-contrib-1.0b3.jar"/>
+     <!-- <pathelement location="lib/ant-contrib-1.0b3.jar"/>-->
+    </classpath>
+  </taskdef>
+  <taskdef name="groovy" classname="org.codehaus.groovy.ant.Groovy">
+    <classpath>
+      <fileset dir="lib">
+        <include name="*.jar"/>
+      </fileset>
+    </classpath>
+  </taskdef>
+  <!--Properties-->
+  <property environment="commonEnv"/>
+  <property file="build/build.properties" />
+
+  <condition property="git.versions" value=""> <not> <isset property="git.versions"/> </not> </condition>
+
+  <!--###############Work Targets###################################################-->
+  <!--Prepare Deployment Package-->
+  <target name="delta.package"
+      description="Generate Deployment package basing on Commits delta and package.xml manifest file"
+      depends="prepareDeploymentPackage">
+  </target>
+
+  <target name="prepareDeploymentPackage"
+      description="Generate Deployment package basing on Commits delta"
+      depends="generateDeploymentPackage_groovy">
+  </target>
+  <target name="generateDeploymentPackage_groovy"
+      description="Call groovy generator"
+      depends="cleanWorkingDirectories">
+      <echo>Current dir:${user.dir}</echo>
+      <echo>Current base dir:${basedir}</echo>
+      <echo>Current project dir dir:${ProjectDir}</echo>
+    <groovy src="groovy/src/main/GenerateDeltaPackage.groovy">
+      <classpath>
+        <dirset dir="groovy"/>
+      </classpath>
+    </groovy>
+  </target>
+  <target name="cleanWorkingDirectories"
+      description="Remove working temp directories">
+    <echo> Clean Working Dir</echo>
+    <delete dir="/${component.deploy_delta}"
+          quiet="true"/>
+    <delete dir="${component.temp_dir}/${org}"
+          quiet="true"/>
+  </target>
+
+  <target name="checkIfClassesDirExists">
+    <condition property="classes.dir.exists" value="true">
+      <available filepath="../${component.deploy_delta}/" file="classes/" type="dir"/>
+    </condition>
+    <condition property="triggers.dir.exists" value="true">
+      <available filepath="../${component.deploy_delta}/" file="triggers/" type="dir"/>
+    </condition>
+  </target>
+
+  <target name="countClassesInPackage" depends="checkIfClassesDirExists">
+    <if>
+      <and>
+        <isset property="classes.dir.exists"/>
+        <isset property="triggers.dir.exists"/>
+      </and>
+      <then>
+        <resourcecount property="classes.in.package">
+          <multirootfileset basedirs="../${component.deploy_delta}/classes,../${component.deploy_delta}/triggers" id="classes">
+            <include name="*.cls" />
+            <include name="*.trigger" />
+            <exclude name="*.cls-meta" />
+            <exclude name="*Test*"/>
+            <exclude name="*.trigger-meta" />
+          </multirootfileset>
+        </resourcecount>
+      </then>
+      <elseif>
+        <and>
+          <isset property="classes.dir.exists"/>
+          <not><isset property="triggers.dir.exists"/></not>
+        </and>
+        <then>
+          <resourcecount property="classes.in.package">
+            <multirootfileset basedirs="../${component.deploy_delta}/classes" id="classes">
+              <include name="*.cls" />
+              <exclude name="*.cls-meta" />
+              <exclude name="*Test*"/>
+            </multirootfileset>
+          </resourcecount>
+        </then>
+      </elseif>
+      <elseif>
+        <and>
+          <not><isset property="classes.dir.exists"/></not>
+          <isset property="triggers.dir.exists"/>
+        </and>
+        <then>
+          <resourcecount property="classes.in.package">
+            <multirootfileset basedirs="../${component.deploy_delta}/triggers" id="classes">
+              <include name="*.trigger" />
+              <exclude name="*.trigger-meta" />
+            </multirootfileset>
+          </resourcecount>
+        </then>
+      </elseif>
+    </if>
+  </target>
+
+  <target name="noClassesInPackage" depends="checkIfClassesDirExists">
+    <if>
+      <and>
+        <not><isset property="classes.dir.exists" /></not>
+        <not><isset property="triggers.dir.exists" /></not>
+      </and>
+    <then>
+      <property name="classes.in.package" value="0" />
+      <property name="classes" value=""/>
+    </then>
+    </if>
+  </target>
+
+  <!--Deploy Code check Only validation-->
+  <target name="delta.package.validate"
+      description="Validates deployment package"
+      depends="countClassesInPackage, noClassesInPackage, getDeploymentPackageSize, deployCodeCheckOnly">
+  </target>
+  <target name="getDeploymentPackageSize">
+    <resourcecount property="packageSize">
+      <fileset dir="../${component.deploy_delta}">
+        <include name="**/*.*"/>
+        <exclude name="package.xml"/>
+      </fileset>
+    </resourcecount>
+    <condition property="isSizePositivie" value="true">
+      <not>
+        <equals arg1="${packageSize}" arg2="0" trim="true"/>
+      </not>
+    </condition>
+
+    <condition property="classes.count" value="true" else="false">
+      <not>
+        <equals arg1="${classes.in.package}" arg2="0" trim="true"/>
+      </not>
+    </condition>
+
+  </target>
+  <target name="deployCodeCheckOnly" if="isSizePositivie">
+    <resourcecount property="delta.package.validate.exec.countmetadatatypesthatrequiretests">
+      <fileset dir="../${component.deploy_delta}">
+        <include name="**/*.*"/>
+        <exclude name="layouts/**/*.*"/>
+        <exclude name="aura/**/*.*"/>
+        <exclude name="pages/**/*.*"/>
+        <exclude name="reports/**/*.*"/>
+        <exclude name="reportTypes/**/*.*"/>
+        <exclude name="dashboards/**/*.*"/>
+        <exclude name="email/**/*.*"/>
+        <exclude name="package.xml"/>
+      </fileset>
+    </resourcecount>
+
+    <echo message="Validate Package:"/>
+    <echo message="Username: ${sf.username}"/>
+    <echo message="Sandbox: ${org}"/>
+    <echo message="Package: ${component.deploy_delta}"/>
+
+    <if>
+      <and>
+        <istrue value="${run.specified.tests}"/>
+        <istrue value="${classes.count}" />
+      </and>
+    <then>
+       <echo message="We should run tests" />
+       <property name="classes_list" value="${toString:classes}" />
+       <script language="javascript">
+        <![CDATA[
+        var example = "test";
+        var json = new Packages.java.lang.String(
+          Packages.java.nio.file.Files.readAllBytes(
+          Packages.java.nio.file.Paths.get(project.getProperty("component.jsonfile"))), "UTF-8");
+        var exceptions = JSON.parse(json);
+        var specialClasses = Object.keys(exceptions['exceptions']);
+        var deployTask = project.createTask('antlib:com.salesforce:deploy');
+        deployTask.setUsername(project.getProperty("sf.username"));
+        deployTask.setPassword(project.getProperty("sf.password"));
+        deployTask.setServerURL(project.getProperty("sf.serverurl"));
+        deployTask.setDeployRoot("build/"+project.getProperty("component.deploy_delta"));
+        deployTask.setTestLevel(project.getProperty("RunSpecifiedTests"));
+        deployTask.setMaxPoll(project.getProperty("sf.maxpool"));
+        deployTask.setCheckonly("true");
+        deployTask.setPollWaitMillis(project.getProperty("sf.pollwaitmillis"));
+        deployTask.setIgnoreWarnings("false");
+        var tests = project.getProperty("classes_list");
+        if (tests) {
+          print("Run tests for classes: ")
+          deployTask.setTestLevel('RunSpecifiedTests');
+          tests = tests.split(':');
+          for (var i = 0; i < tests.length; i++) {
+            shortname = tests[i].split('/').reverse()[0];
+            idx = specialClasses.indexOf(shortname.replace('.cls','').replace('.trigger',''));
+            if ( idx != -1 ) {
+              tmp = exceptions['exceptions'][specialClasses[idx]];
+            } else {
+              tmp = shortname.replace('.cls',"_Test").replace('.trigger','_Test');
+            }
+            print("== Class: " + shortname.replace('.cls',"").replace('.trigger','') + " -- Test Class: " + tmp + " ==")
+            var runTest = java.lang.Class.forName(
+              "com.salesforce.ant.DeployTask$CodeNameElement"
+            ).newInstance();
+            runTest.addText(tmp);
+            deployTask.addRunTest(runTest);
+          }
+        }
+        deployTask.perform();
+      ]]></script>
+    </then>
+    <elseif>
+      <and>
+         <istrue value="${run.specified.tests}"/>
+         <isfalse value="${classes.count}" />
+         <istrue value="${prod.deploy}" />
+       </and>
+       <then>
+         <echo message="Deploy on prod: run at least one test" />
+         <sf:deploy username="${sf.username}"
+           password="${sf.password}"
+           serverurl="${sf.serverurl}"
+           maxpoll="${sf.maxpoll}"
+           deployRoot="../${component.deploy_delta}"
+           autoUpdatePackage="true"
+           checkOnly="true"
+           pollWaitMillis="10000"
+           testLevel="RunSpecifiedTests"
+           ignoreWarnings="false"
+           purgeOnDelete="false">
+         <runTest>"${deploy.default.test}"</runTest>
+        </sf:deploy>
+       </then>
+    </elseif>
+    <else>
+      <echo message="No tests should be run" />
+       <sf:deploy username="${sf.username}"
+           password="${sf.password}"
+           serverurl="${sf.serverurl}"
+           maxpoll="${sf.maxpoll}"
+           deployRoot="../${component.deploy_delta}"
+           autoUpdatePackage="true"
+           checkOnly="true"
+           pollWaitMillis="10000"
+           testLevel="NoTestRun"
+           ignoreWarnings="false"
+           purgeOnDelete="false"/>
+    </else>
+    </if>
+  </target>
+
+
+<!--
+  <target name="describeMetadata">
+    <sf:describeMetadata
+            username="${sf.username}"
+            password="${sf.password}"
+            serverurl="${sf.serverurl}"
+            resultFilePath="${component.temp_dir_describe}"
+            trace="false"/>
+  </target>
+-->
+
+
+  <target name="delta.package.deploy.exec">
+    <resourcecount property="delta.package.validate.exec.countmetadatatypesthatrequiretests">
+      <fileset dir="../${component.deploy_delta}">
+        <include name="**/*.*"/>
+        <exclude name="layouts/**/*.*"/>
+        <exclude name="aura/**/*.*"/>
+        <exclude name="pages/**/*.*"/>
+        <exclude name="reports/**/*.*"/>
+        <exclude name="reportTypes/**/*.*"/>
+        <exclude name="dashboards/**/*.*"/>
+        <exclude name="email/**/*.*"/>
+        <exclude name="package.xml"/>
+      </fileset>
+    </resourcecount>
+    <if>
+       <and>
+         <istrue value="${run.specified.tests}"/>
+         <istrue value="${prod.deploy}" />
+       </and>
+       <then>
+         <echo message="Deploy previously created delta package of ${org} in ${component.deploy_delta} against ${sf.serverurl} as ${sf.username} with test level RunSpecifiedTests"/>
+         <sf:deploy username="${sf.username}"
+           password="${sf.password}"
+           serverurl="${sf.serverurl}"
+           maxpoll="${sf.maxpoll}"
+           deployRoot="../${component.deploy_delta}"
+           autoUpdatePackage="true"
+           pollWaitMillis="10000"
+           testLevel="RunSpecifiedTests"
+           ignoreWarnings="false"
+           purgeOnDelete="false">
+         <runTest>"${deploy.default.test}"</runTest>
+        </sf:deploy>
+       </then>
+       <else>
+      <condition property="sf.testlevel" value="RunLocalTests">
+        <and>
+          <not>
+            <isset property="sf.testlevel"/>
+          </not>
+          <not>
+            <equals arg1="${delta.package.validate.exec.countmetadatatypesthatrequiretests}" arg2="0" trim="true"/>
+          </not>
+        </and>
+      </condition>
+      <condition property="sf.testlevel" value="NoTestRun">
+        <and>
+          <not>
+            <isset property="sf.testlevel"/>
+          </not>
+          <equals arg1="${delta.package.validate.exec.countmetadatatypesthatrequiretests}" arg2="0" trim="true"/>
+        </and>
+      </condition>
+      <condition property="sf.ignorewarnings" value="false">
+        <not>
+          <isset property="sf.ignorewarnings"/>
+        </not>
+      </condition>
+      <condition property="sf.purgeOnDelete" value="false">
+        <not>
+          <isset property="sf.purgeOnDelete"/>
+        </not>
+      </condition>
+      <echo message="Deploy previously created delta package of ${org} in ${component.deploy_delta} against ${sf.serverurl} as ${sf.username} with test level ${sf.testlevel}"/>
+      <sf:deploy username="${sf.username}"
+           password="${sf.password}"
+           serverurl="${sf.serverurl}"
+           maxpoll="${sf.maxpoll}"
+           deployRoot="../${component.deploy_delta}"
+           autoUpdatePackage="true"
+           pollWaitMillis="10000"
+           testLevel="${sf.testlevel}"
+           ignoreWarnings="${sf.ignorewarnings}"
+           purgeOnDelete="${sf.purgeOnDelete}"/>
+     </else>
+   </if>
+  </target>
+  <!--#################################################################################-->
+  <!--In Development - Retrieve code and compare with terget branch before deployment-->
+  <target name="delta.package.retrieve"
+      description="Retrieve Backup Package Before Deployment"
+      depends="generateDeploymentPackage_groovy">
+    <sf:retrieve username="${sf.username}"
+           password="${sf.password}"
+           serverurl="${sf.serverurl}"
+           retrieveTarget="${component.temp_retrieve}"
+           unpackaged="${component.temp_retrieve}/package.xml"/>
+    <groovy src="groovy/src/main/CompareTargetWithBranch.groovy">
+      <classpath>
+        <dirset dir="groovy"/>
+      </classpath>
+    </groovy>
+  </target>
+  <!--#################################################################################-->
+  <!--In Development - Generate test report-->
+
+  <target name="delta.package.run.tests"
+      description="Runs tests on target env">
+
+    <echo message="Run tests:"/>
+    <echo message="Sandbox: ${org}"/>
+    <sf:deploy username="${sf.username}"
+           password="${sf.password}"
+           serverurl="${sf.serverurl}"
+           maxpoll="${sf.maxpoll}"
+           deployRoot="${component.deploy_delta}"
+           autoUpdatePackage="true"
+           checkOnly="true"
+           pollWaitMillis="10000"
+           testLevel="RunLocalTests"
+           ignoreWarnings="false"
+           purgeOnDelete="false"/>
+  </target>
+  <target name="generate.test.report"
+      description="">
+    <groovy src="groovy/src/main/ExportApexTestCoverage.groovy">
+      <classpath>
+        <dirset dir="groovy"/>
+      </classpath>
+    </groovy>
+  </target>
+</project>

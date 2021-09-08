@@ -1,0 +1,20 @@
+#!/bin/bash
+
+artifact_path=$1
+pkg=$2
+echo "Compress complete package for ${artifact_path}"
+sgp.cmd -s ${artifact_path} -o ${artifact_path} -a 52.0
+chmod +x ../../scripts/add_to_xml.py
+../../scripts/add_to_xml.py -s ${artifact_path} -p ${artifact_path}/package.xml
+file_lwc=`ls $artifact_path|grep lwc`
+if [ "lwc" == "${file_lwc}" ]; then
+    echo "--- start lwc ---"
+    for i in `ls $artifact_path/lwc`
+    do
+        echo "---lwc : $i"
+        cp -r ../../../src/lwc/$i $artifact_path/lwc
+    done
+    echo "--- end lwc ---"
+fi
+echo "Compress package directory if exists."
+zip -r ${pkg} ${artifact_path}

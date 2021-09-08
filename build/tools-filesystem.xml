@@ -1,0 +1,257 @@
+<project name="File system tools">
+         
+    <description>
+        This build script provides file system macros and scripts.
+    </description>
+
+    <!--Finds the differences between two folder-->
+    <!--source: the source folder-->
+    <!--target: the folder to compare the source folder with-->
+    <!--newlimit: the max number of new files which is allowed-->
+    <!--deletedlimit: the max number of deleted files which is allowed-->
+    <!--changedlimit: the max number of changed files which is allowed-->
+    <!--newfiles: a property prefix for the list of names of files that exist in source only-->
+    <!--deletedfiles: a property prefix for the list of names of files that exist in target only-->
+    <!--changedfiles: a property prefix for the list of names of files that exist in both, but are different-->
+    <!--For each of these properties, 3 properties are returned:-->
+    <!--.files: a property name to store the list of names of files that exist in source only-->
+    <!--.size: a property name to store the size of the list of names of files that exist in source only-->
+    <!--.toomuch: a property name to store whether the max number of files was exceeded-->
+    <macrodef name="folderdiff.find">
+        <attribute name="source"/>
+        <attribute name="target"/>
+        <attribute name="newlimit"/>
+        <attribute name="deletedlimit"/>
+        <attribute name="changedlimit"/>
+        <attribute name="newfiles"/>
+        <attribute name="deletedfiles"/>
+        <attribute name="changedfiles"/>
+
+        <sequential>
+            <fileset dir="@{target}" id="newfiles.filesetid">
+                <present present="srconly" targetdir="@{source}"/>
+            </fileset>
+            <resourcecount property="@{newfiles}.size"
+                           refid="newfiles.filesetid"/>
+            <condition property="@{newfiles}.toomuch"
+                       value="true"
+                       else="false">
+                <resourcecount refid="newfiles.filesetid"
+                               when="gt" 
+                               count="@{newlimit}"/>
+            </condition>
+            <pathconvert property="@{newfiles}.files"
+                         refid="newfiles.filesetid"
+                         dirsep="/"
+                         pathsep="${line.separator}">
+                <map from="@{target}/" 
+                     to=""/>
+            </pathconvert>
+            <condition property="@{newfiles}.files"
+                       value="">
+                <not>
+                    <isset property="@{newfiles}.files"/>
+                </not>
+            </condition>
+          
+            <fileset dir="@{source}" id="deletedfiles.filesetid">
+                <present present="srconly" targetdir="@{target}"/>
+            </fileset>
+            <resourcecount property="@{deletedfiles}.size"
+                           refid="deletedfiles.filesetid"/>
+            <condition property="@{deletedfiles}.toomuch"
+                       value="true"
+                       else="false">
+                <resourcecount refid="deletedfiles.filesetid"
+                               when="gt" 
+                               count="@{deletedlimit}"/>
+            </condition>
+            <pathconvert property="@{deletedfiles}.files"
+                         refid="deletedfiles.filesetid"
+                         dirsep="/"
+                         pathsep="${line.separator}">
+                <map from="@{source}/" 
+                     to=""/>
+            </pathconvert>
+            <condition property="@{deletedfiles}.files"
+                       value="">
+                <not>
+                    <isset property="@{deletedfiles}.files"/>
+                </not>
+            </condition>
+            
+            <fileset dir="@{source}" id="changedfiles.filesetid">
+                <and>
+                    <present present="both" targetdir="@{target}"/>
+                    <different targetdir="@{target}"
+                               ignoreFileTimes="true"/>
+                </and>
+            </fileset>
+            <condition property="@{changedfiles}.toomuch"
+                       value="true"
+                       else="false">
+                <resourcecount refid="changedfiles.filesetid"
+                               when="gt" 
+                               count="@{changedlimit}"/>
+            </condition>
+            <resourcecount property="@{changedfiles}.size"
+                           refid="changedfiles.filesetid"/>
+            <pathconvert property="@{changedfiles}.files"
+                         refid="changedfiles.filesetid"
+                         dirsep="/"
+                         pathsep="${line.separator}">
+                <map from="@{source}/" 
+                     to=""/>
+            </pathconvert>
+            <condition property="@{changedfiles}.files"
+                       value="">
+                <not>
+                    <isset property="@{changedfiles}.files"/>
+                </not>
+            </condition>
+        </sequential>
+    </macrodef>
+    
+    <!--Exports the differences between two folder into a file named folderdiff.txt-->
+    <!--source: the source folder-->
+    <!--target: the folder to compare the source folder with-->
+    <!--newlimit: the max number of new files which is allowed-->
+    <!--deletedlimit: the max number of deleted files which is allowed-->
+    <!--changedlimit: the max number of changed files which is allowed-->
+    <!--newfiles: a property prefix for the list of names of files that exist in source only-->
+    <!--deletedfiles: a property prefix for the list of names of files that exist in target only-->
+    <!--changedfiles: a property prefix for the list of names of files that exist in both, but are different-->
+    <!--For each of these properties, 3 properties are expected:-->
+    <!--.files: a property name to store the list of names of files that exist in source only-->
+    <!--.size: a property name to store the size of the list of names of files that exist in source only-->
+    <!--.toomuch: a property name to store whether the max number of files was exceeded-->
+    <!--folder: the folder to store the file with differences report-->
+    <macrodef name="folderdiff.exportresults">
+        <attribute name="source"/>
+        <attribute name="target"/>
+        <attribute name="newlimit"/>
+        <attribute name="deletedlimit"/>
+        <attribute name="changedlimit"/>
+        <attribute name="newfiles"/>
+        <attribute name="deletedfiles"/>
+        <attribute name="changedfiles"/>
+        <attribute name="folder"/>
+
+        <sequential>
+            <!--Create report file-->
+            <echo file="@{folder}/folderdiff.txt">Result of comparing folder @{source} with content in @{target}</echo>
+            <echo file="@{folder}/folderdiff.txt"
+                  append="true">
+
+Summary:
+========
+Limit of new files:     @{newlimit}
+Limit of deleted files: @{deletedlimit}
+Limit of changed files: @{changedlimit}
+Count of new files:     ${@{newfiles}.size} (limit broken: ${@{newfiles}.toomuch})
+Count of deleted files: ${@{deletedfiles}.size} (limit broken: ${@{deletedfiles}.toomuch})
+Count of changed files: ${@{changedfiles}.size} (limit broken: ${@{changedfiles}.toomuch})
+
+New files (in org, but not in branch):
+======================================
+${@{newfiles}.files}
+
+Deleted files (in branch, but not in org):
+==========================================
+${@{deletedfiles}.files}
+
+Changed files (in both org and branch, but different):
+======================================================
+${@{changedfiles}.files}</echo>
+        </sequential>
+    </macrodef>
+
+    <!--Removes callback urls and consumer keys from connected apps so they can-->
+    <!--be compared between multiple orgs resp. branches-->
+    <!--source: the folder to handle; a subfolder connectedApps is expected there-->
+    <macrodef name="connectedapp.anonymous">
+		<attribute name="source"/>
+		<sequential>
+            <if>
+                <available file="@{source}/connectedApps"/>
+                <then>
+                    <replaceregexp byline="false"
+                                   flags="s">
+                        <regexp pattern="^(.*?)&lt;callbackUrl&gt;.*?&lt;/callbackUrl&gt;(.*?)$"/>
+                        <substitution expression="\1\2"/>
+                        <fileset dir="@{source}">
+                            <include name="connectedApps/*.*"/>
+                        </fileset>
+                    </replaceregexp>
+                    <replaceregexp byline="true">
+                        <regexp pattern="^(.*?&lt;consumerKey&gt;).*?(&lt;/consumerKey&gt;)$"/>
+                        <substitution expression=""/>
+                        <fileset dir="@{source}">
+                            <include name="connectedApps/*.*"/>
+                        </fileset>
+                    </replaceregexp>
+                </then>
+            </if>        
+		</sequential>
+	</macrodef>
+    
+    <!--Removes one specific user permission from profiles and permission sets-->
+    <!--source: the folder to handle; the subfolder profiles and permissionsets are expected there-->
+    <!--permissionname: the name of the permission to remove-->
+    <macrodef name="userpermission.remove">
+		<attribute name="source"/>
+		<attribute name="permissionname"/>
+		<sequential>
+            <replaceregexp byline="false"
+                           flags="s">
+                <regexp pattern="\s*&lt;userPermissions&gt;\s*&lt;enabled&gt;\w*&lt;/enabled&gt;\s*&lt;name&gt;@{permissionname}&lt;/name&gt;.*?&lt;/userPermissions&gt;"/>
+                <substitution expression=""/>
+                <fileset dir="@{source}">
+                    <include name="permissionsets/*.permissionset"/>
+                    <include name="profiles/*.profile"/>
+                </fileset>
+            </replaceregexp>           
+		</sequential>
+	</macrodef>
+    
+    <!--Removes one specific object permission from profiles and permission sets-->
+    <!--source: the folder to handle; the subfolder profiles and permissionsets are expected there-->
+    <!--objectname: the name of the object for which all permissions are removed-->
+    <macrodef name="objectpermission.remove">
+		<attribute name="source"/>
+		<attribute name="objectname"/>
+		<sequential>
+            <replaceregexp byline="false"
+                           flags="s">
+                <regexp pattern="\s*&lt;objectPermissions&gt;\s*&lt;allowCreate&gt;\w*&lt;/allowCreate&gt;\s*&lt;allowDelete&gt;\w*?&lt;/allowDelete&gt;\s*&lt;allowEdit&gt;\w*?&lt;/allowEdit&gt;\s*&lt;allowRead&gt;\w*?&lt;/allowRead&gt;\s*&lt;modifyAllRecords&gt;\w*?&lt;/modifyAllRecords&gt;\s*&lt;object&gt;@{objectname}&lt;/object&gt;\s*&lt;viewAllRecords&gt;\w*?&lt;/viewAllRecords&gt;\s*&lt;/objectPermissions&gt;"/>
+                <substitution expression=""/>
+                <fileset dir="@{source}">
+                    <include name="permissionsets/*.permissionset"/>
+                    <include name="profiles/*.profile"/>
+                </fileset>
+            </replaceregexp>           
+		</sequential>
+	</macrodef>
+    
+    <!--Removes a specific setting from a settings files so they can-->
+    <!--be compared between multiple orgs resp. branches-->
+    <!--source: the settings file to handle-->
+    <!--setting: the name of the setting to remove-->
+    <macrodef name="setting.remove">
+		<attribute name="source"/>
+		<attribute name="setting"/>
+		<sequential>
+            <if>
+                <available file="@{source}"/>
+                <then>
+                    <replaceregexp file="@{source}"
+                                   byline="false"
+                                   flags="g">
+                        <regexp pattern="\s*&lt;preferences&gt;\s*?&lt;settingName&gt;@{setting}&lt;/settingName&gt;\s*?&lt;settingValue&gt;.*?&lt;/settingValue&gt;\s*?&lt;/preferences&gt;"/>
+                        <substitution expression=""/>
+                    </replaceregexp>
+                </then>
+            </if>        
+		</sequential>
+	</macrodef>
+</project>

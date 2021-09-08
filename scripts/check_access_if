@@ -1,0 +1,19 @@
+#!/bin/bash
+
+if [ "$1" == "frontend" ]; then
+    varable=`cat ../../../changesfrombranch.txt|grep frontend| wc -l`
+    if [ "$variable" != "0" ]; then
+        echo "1"
+    else
+        echo "0"
+    fi
+fi
+
+if [ "$1" == "dataloader" ]; then
+    varable=`cat ../../../changesfrombranch.txt|grep dataloader| wc -l`
+    if [ "$variable" != "0" ]; then
+        echo "1"
+    else
+        echo "0"
+    fi
+fi
