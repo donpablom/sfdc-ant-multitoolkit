@@ -1,0 +1,24 @@
+#!/bin/bash
+echo ------ start copy meta for staticresources -----
+plusmeta="-meta.xml"
+name_folder=$1
+for i in `ls -Rl ../../../src/|grep "src/staticresour"|tr ':' '/'` 
+do
+	a=`echo $i|sed 's/..\/..\/..\/src\//\//g'`
+#	echo i -- $i
+	echo $i|sed 's/..\/..\/..\/src\//\//g'
+#	echo a -- $a
+	for z in `ls $i|grep meta`
+	do
+#		echo z -- $z
+		for m in `ls $i|grep -v meta`
+		do
+			if [ -e "./$name_folder/$a/$m" ] && [ "$m$plusmeta" == "$z" ]
+			then
+				cp $i$z ./$name_folder/$a/$z
+			fi
+		done
+	done
+done
+
+echo ------ end copy -----

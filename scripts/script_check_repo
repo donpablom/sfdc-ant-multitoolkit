@@ -1,0 +1,8 @@
+#!/bin/bash
+ touch changesfrombranch.txt
+ lastrevision=$1
+ commitgit=$2
+ git diff --name-only $lastrevision $commitgit > changesfrombranch.txt
+ chmod 775 buildscripts/scripts/*
+ cp buildscripts/scripts/* buildscripts/build/artifact
+ cp buildscripts/scripts/copy_configuration_for_dataloader buildscripts/build

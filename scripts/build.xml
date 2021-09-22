@@ -1,0 +1,113 @@
+<project name="AntDeployment" default="retrieveCode" basedir="." xmlns:sf="antlib:com.salesforce">
+
+ <taskdef resource="com/salesforce/antlib.xml" uri="antlib:com.salesforce">
+    <classpath>
+      <pathelement location="buildscripts/lib/ant-salesforce.jar" />
+    </classpath>
+  </taskdef>
+  <!--Properties-->
+  <property environment="commonEnv"/>
+  <property file="build.properties" />
+  
+  
+		<macrodef name="execanon" description="Executes apex code in an organization - Revision 7">
+
+			<text name="apexcode" />
+			<attribute name="username" />
+			<attribute name="password" />
+			<attribute name="serverurl" default="https://test.salesforce.com" />
+			<attribute name="apiVersion" default="52.0" />
+			
+
+			<sequential>
+
+				<macrodef name="soapcall">
+					<text name="request" />
+					<attribute name="endpoint" />
+					<attribute name="tempfile" />
+					<attribute name="soapaction" default="&quot;&quot;" />
+					<sequential>
+						<!-- make attributes accessible inside script as properties -->
+						<local name="request" /><property name="request" value="@{request}" />
+						<local name="endpoint" /><property name="endpoint" value="@{endpoint}" />
+						<local name="tempfile" /><property name="tempfile" value="@{tempfile}" />
+						<local name="soapaction" /><property name="soapaction" value="@{soapaction}" />
+						<script language="javascript">with (new JavaImporter(java.net, java.io)) {
+							var line, result = '', connection = new URL(project.getProperty('endpoint')).openConnection();
+							connection.setDoOutput(true);
+							connection.setRequestMethod('POST');
+							connection.setRequestProperty('Content-Type', 'text/xml');
+							connection.setRequestProperty('SOAPAction', project.getProperty('soapaction'));
+							var writer = new OutputStreamWriter(connection.getOutputStream());
+							writer.write(project.getProperty('request')); writer.flush(); //request
+							var reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+							while ((line = reader.readLine()) != null) result += line + '\n'; reader.close(); //response
+							var echo = project.createTask('echo');
+							echo.setFile(new File(project.getProperty('tempfile')));
+							echo.setMessage(result);
+							echo.perform();
+						}</script>
+					</sequential>
+				</macrodef>
+
+				<local name="loginResponse.tmp" />
+				<tempfile property="loginResponse.tmp" prefix="loginResponse" suffix=".tmp" createfile="true" deleteonexit="true" />
+				<soapcall tempfile="${loginResponse.tmp}" endpoint="@{serverurl}/services/Soap/T/@{apiVersion}" soapaction="login"><![CDATA[
+					<Envelope xmlns="http://schemas.xmlsoap.org/soap/envelope/">
+						<Body>
+							<login xmlns="urn:tooling.soap.sforce.com">
+								<username>@{username}</username>
+								<password>@{password}</password>
+							</login>
+						</Body>
+					</Envelope>
+				]]></soapcall>
+
+				<local name="loginResponse" />
+				<xmlproperty prefix="loginResponse" file="${loginResponse.tmp}" />
+
+				<local name="executeAnonymous.tmp" />
+				<tempfile property="executeAnonymous.tmp" prefix="executeAnonymous" suffix=".tmp" createfile="true" deleteonexit="true" />
+				<echoxml file="${executeAnonymous.tmp}" namespacePolicy="all">
+					<Envelope xmlns="http://schemas.xmlsoap.org/soap/envelope/">
+						<Header>
+							<SessionHeader xmlns="urn:tooling.soap.sforce.com">
+								<sessionId>${loginResponse.soapenv:Envelope.soapenv:Body.loginResponse.result.sessionId}</sessionId>
+							</SessionHeader>
+						</Header>
+						<Body>
+							<executeAnonymous xmlns="urn:tooling.soap.sforce.com">
+								<String>@{apexcode}</String>
+							</executeAnonymous>
+						</Body>
+					</Envelope>
+				</echoxml>
+
+				<local name="executeAnonymous" />
+				<loadfile property="executeAnonymous" srcFile="${executeAnonymous.tmp}" />
+
+				<local name="executeAnonymousResponse.tmp" /><!-- Tempfiles stuffed on Windows, must use createfile="false" -->
+				<tempfile property="executeAnonymousResponse.tmp" prefix="executeAnonymousResponse" suffix=".tmp" createfile="false" deleteonexit="true" />
+				<soapcall tempfile="${executeAnonymousResponse.tmp}" endpoint="${loginResponse.soapenv:Envelope.soapenv:Body.loginResponse.result.serverUrl}">${executeAnonymous}</soapcall>
+
+				<local name="executeAnonymousResponse" />
+				<xmlproperty prefix="executeAnonymousResponse" file="${executeAnonymousResponse.tmp}" />
+
+				<echo>@{apexcode}</echo>
+				<echo>${executeAnonymousResponse.soapenv:Envelope.soapenv:Body.executeAnonymousResponse.result.compileProblem}</echo>
+				<echo>${executeAnonymousResponse.soapenv:Envelope.soapenv:Body.executeAnonymousResponse.result.exceptionMessage}</echo>
+				<echo>${executeAnonymousResponse.soapenv:Envelope.soapenv:Body.executeAnonymousResponse.result.exceptionStackTrace}</echo>
+
+			</sequential>
+
+		</macrodef>
+		
+		<target name="execanonApex">
+			<loadfile property="script" srcFile="${sf.script.name}"/>
+
+            <echo message="run apex: ${sf.script.name}"/>
+			<execanon username="${sf.username}" password="${sf.password}" serverurl="${sf.serverurlSANDBOX}">
+				${script}
+			</execanon>
+		</target>
+</project>

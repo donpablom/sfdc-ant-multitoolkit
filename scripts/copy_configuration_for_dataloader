@@ -1,0 +1,9 @@
+#!/bin/bash
+mkdir jenkins_dataloader
+echo ----check home dataloader----
+
+cp -r  /home/jenkins/mydataloader jenkins_dataloader/
+cp -r ../../dataloader/* jenkins_dataloader/mydataloader/target/classes/
+cp  ../scripts/script_dataloader.sh jenkins_dataloader/mydataloader/target/classes/
+cp  ../filejar/ojdbc6.jar jenkins_dataloader/mydataloader/target/
+ls jenkins_dataloader/mydataloader/target/classes/

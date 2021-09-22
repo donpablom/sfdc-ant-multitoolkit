@@ -1,0 +1,48 @@
+#!/bin/bash
+
+echo ---start script apex---
+user_pass="$1"
+user_name="$2"
+target="$3"
+workspace="$4"
+TEST_SERVER="$5"
+cp ../scripts/scriptApex ${workspace}/apexscript/scriptApex
+cp ../scripts/build.properties ${workspace}/apexscript/build.properties
+cp ../scripts/build.xml ${workspace}/apexscript/build.xml
+chmod 755 ${workspace}/apexscript/scriptApex
+checkfolderdeltapermission=`ls -R |grep deltapermission|wc -l`
+dos2unix ${workspace}/apexscript/build.properties
+skippermission=`cat ../../changesfrombranch.txt|grep permissionset|wc -l`
+
+for script1 in `ls ${workspace}/apexscript/|grep -v build|grep -v emptydir|grep -v scriptApex `
+do
+    checkInsertPermission="1"
+    numberLoop=0
+    while [ "$checkInsertPermission" == "1" ];
+    do
+
+        if ([ "$skippermission" == "0" ] && [ "${script1}" == "permisionsetgroup" ]) || ([ "$skippermission" == "0" ] && [ "${script1}" == "createpermissiongroups" ]); then
+            break
+        fi
+
+        if [ "${script1}" == "permisionsetgroup" ] && [ "$checkfolderdeltapermission" != "0" ] || [ "${script1}" == "assignApexClassesToPermissionSets" ]; then
+            sleep 2m
+        fi
+
+        echo "sf.script.name=${script1}" >>${workspace}/apexscript/build.properties
+        ant -v ${target} -buildfile ${workspace}/apexscript/build.xml -propertyfile ${workspace}/apexscript/build.properties -Dsf.serverurl=${TEST_SERVER}  -Dsf.username="${user_name}" -Dsf.password="${user_pass}" -lib ${workspace}/buildscripts/lib/ > ant.log 2>&1
+        checkInsertPermission=`cat ant.log| grep "System.DmlException: Insert failed"| wc -l`
+        cat ant.log
+        numberLoop=`expr $numberLoop + 1`
+        sed -i '/sf\.script\.name*/d' ${workspace}/apexscript/build.properties
+
+        if [ "$numberLoop" == "5" ] || [ "${script1}" == "permisionsetgroup" ] && [ "$checkfolderdeltapermission" == "0" ] || [ "${script1}" == "createpermissiongroups" ] && [ "$checkfolderdeltapermission" == "0" ]; then
+            break
+        fi
+        if [ $numberLoop -ge 5 ]; then
+            break
+        fi
+
+    done
+done
+echo ----end script apex----
