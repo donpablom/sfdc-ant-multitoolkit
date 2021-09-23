@@ -40,9 +40,11 @@
   <target name="generateDeploymentPackage_groovy"
       description="Call groovy generator"
       depends="cleanWorkingDirectories">
-      <echo>Current dir:${user.dir}</echo>
-      <echo>Current base dir:${basedir}</echo>
-      <echo>Current project dir dir:${ProjectDir}</echo>
+
+      <echo level="verbose">Current dir:${user.dir} ${line.separator}
+        Current base dir:${basedir} ${line.separator}
+        Current project dir dir:${ProjectDir} ${line.separator}
+      </echo>
     <groovy src="groovy/src/main/GenerateDeltaPackage.groovy">
       <classpath>
         <dirset dir="groovy"/>
@@ -51,7 +53,7 @@
   </target>
   <target name="cleanWorkingDirectories"
       description="Remove working temp directories">
-    <echo> Clean Working Dir</echo>
+    <echo level="info"> Clean Working Dir</echo>
     <delete dir="/${component.deploy_delta}"
           quiet="true"/>
     <delete dir="${component.temp_dir}/${org}"
@@ -169,10 +171,10 @@
       </fileset>
     </resourcecount>
 
-    <echo message="Validate Package:"/>
-    <echo message="Username: ${sf.username}"/>
-    <echo message="Sandbox: ${org}"/>
-    <echo message="Package: ${component.deploy_delta}"/>
+    <echo level="verbose" message="Validate Package: ${line.separator}
+    Username: ${sf.username} ${line.separator}
+    Sandbox: ${org} ${line.separator}
+    Package: ${component.deploy_delta} ${line.separator}"/>
 
     <if>
       <and>
@@ -180,7 +182,7 @@
         <istrue value="${classes.count}" />
       </and>
     <then>
-       <echo message="We should run tests" />
+       <echo level="info" message="We should run tests" />
        <property name="classes_list" value="${toString:classes}" />
        <script language="javascript">
         <![CDATA[
@@ -231,7 +233,7 @@
          <istrue value="${prod.deploy}" />
        </and>
        <then>
-         <echo message="Deploy on prod: run at least one test" />
+         <echo level="info" message="Deploy on prod: run at least one test" />
          <sf:deploy username="${sf.username}"
            password="${sf.password}"
            serverurl="${sf.serverurl}"
@@ -239,7 +241,7 @@
            deployRoot="../${component.deploy_delta}"
            autoUpdatePackage="true"
            checkOnly="true"
-           pollWaitMillis="10000"
+           pollWaitMillis="${sf.pollwaitmillis}"
            testLevel="RunSpecifiedTests"
            ignoreWarnings="false"
            purgeOnDelete="false">
@@ -248,7 +250,7 @@
        </then>
     </elseif>
     <else>
-      <echo message="No tests should be run" />
+      <echo level="info" message="No tests should be run" />
        <sf:deploy username="${sf.username}"
            password="${sf.password}"
            serverurl="${sf.serverurl}"
@@ -256,7 +258,7 @@
            deployRoot="../${component.deploy_delta}"
            autoUpdatePackage="true"
            checkOnly="true"
-           pollWaitMillis="10000"
+           pollWaitMillis="${sf.pollwaitmillis}"
            testLevel="NoTestRun"
            ignoreWarnings="false"
            purgeOnDelete="false"/>
@@ -297,14 +299,14 @@
          <istrue value="${prod.deploy}" />
        </and>
        <then>
-         <echo message="Deploy previously created delta package of ${org} in ${component.deploy_delta} against ${sf.serverurl} as ${sf.username} with test level RunSpecifiedTests"/>
+         <echo level="info" message="Deploy previously created delta package of ${org} in ${component.deploy_delta} against ${sf.serverurl} as ${sf.username} with test level RunSpecifiedTests"/>
          <sf:deploy username="${sf.username}"
            password="${sf.password}"
            serverurl="${sf.serverurl}"
            maxpoll="${sf.maxpoll}"
            deployRoot="../${component.deploy_delta}"
            autoUpdatePackage="true"
-           pollWaitMillis="10000"
+           pollWaitMillis="${sf.pollwaitmillis}"
            testLevel="RunSpecifiedTests"
            ignoreWarnings="false"
            purgeOnDelete="false">
@@ -340,14 +342,14 @@
           <isset property="sf.purgeOnDelete"/>
         </not>
       </condition>
-      <echo message="Deploy previously created delta package of ${org} in ${component.deploy_delta} against ${sf.serverurl} as ${sf.username} with test level ${sf.testlevel}"/>
+      <echo level="info" message="Deploy previously created delta package of ${org} in ${component.deploy_delta} against ${sf.serverurl} as ${sf.username} with test level ${sf.testlevel}"/>
       <sf:deploy username="${sf.username}"
            password="${sf.password}"
            serverurl="${sf.serverurl}"
            maxpoll="${sf.maxpoll}"
            deployRoot="../${component.deploy_delta}"
            autoUpdatePackage="true"
-           pollWaitMillis="10000"
+           pollWaitMillis="${sf.pollwaitmillis}"
            testLevel="${sf.testlevel}"
            ignoreWarnings="${sf.ignorewarnings}"
            purgeOnDelete="${sf.purgeOnDelete}"/>
@@ -355,7 +357,7 @@
    </if>
   </target>
   <!--#################################################################################-->
-  <!--In Development - Retrieve code and compare with terget branch before deployment-->
+  <!--In Development - Retrieve code and compare with target branch before deployment-->
   <target name="delta.package.retrieve"
       description="Retrieve Backup Package Before Deployment"
       depends="generateDeploymentPackage_groovy">
@@ -376,8 +378,8 @@
   <target name="delta.package.run.tests"
       description="Runs tests on target env">
 
-    <echo message="Run tests:"/>
-    <echo message="Sandbox: ${org}"/>
+    <echo level="info" message="Run tests:"/>
+    <echo level="info" message="Sandbox: ${org}"/>
     <sf:deploy username="${sf.username}"
            password="${sf.password}"
            serverurl="${sf.serverurl}"
@@ -385,14 +387,14 @@
            deployRoot="${component.deploy_delta}"
            autoUpdatePackage="true"
            checkOnly="true"
-           pollWaitMillis="10000"
+           pollWaitMillis="${sf.pollwaitmillis}"
            testLevel="RunLocalTests"
            ignoreWarnings="false"
            purgeOnDelete="false"/>
   </target>
   <target name="generate.test.report"
       description="">
-    <groovy src="groovy/src/main/ExportApexTestCoverage.groovy">
+    <groovy stacktrace="${groovy.stacktrace.enabled}" src="groovy/src/main/ExportApexTestCoverage.groovy">
       <classpath>
         <dirset dir="groovy"/>
       </classpath>

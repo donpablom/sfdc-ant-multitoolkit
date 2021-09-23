@@ -55,7 +55,7 @@ public class Filter {
      * Adds default filters (based on metadata type, managed packages and file names)
      */
     public void addFilter() {
-        println "void addFilter"
+        println "Filter.addFilter"
         addMetadataTypeFilter()
         addManagedPackageFilter(null)
         addFileNameFilter()
@@ -66,7 +66,7 @@ public class Filter {
      * @param packageName Name of a managed package, can be null
      */
     public void addFilter(String packageName) {
-        println "void addFilter string package name:" + packageName
+        println "Filter.addFilter(" + packageName + ")"
         addMetadataTypeFilter()
         addManagedPackageFilter(packageName)
         addFileNameFilter()

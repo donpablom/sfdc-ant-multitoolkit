@@ -10,6 +10,8 @@ println "userName:" + userName
 String password = "${properties['sf.password']}"
 String serverurl = "${properties['sf.serverurl']}"
 println "serverurl:" + serverurl
+String organization = "${properties['org']}"
+println "organization:" + organization
 String apiversion = "${properties['sf.apiversion']}"
 println "apiversion:" + apiversion
 String srcDir = "${properties['component.src']}"
@@ -20,22 +22,17 @@ String tempDir = "${properties['component.temp_dir']}"
 println "tempDir:" + tempDir
 String versions = "${properties['git.versions']}"
 println "versions:" + versions
-String versionss = "${properties['gitversions']}"
-println "versionss:" + versionss
 String gitExecutable = "${properties['git.executable']}"
-println "gitExecutable:" + gitExecutable
-String organization = "${properties['org']}"
-println "organization:" + organization
 Boolean isHotfix = "${properties['hotfix']}".toBoolean()
 println "isHotfix:" + isHotfix
 
 def scriptDir = getClass().protectionDomain.codeSource.location.path
 String currentDir = new File(".").getAbsolutePath()
-println "Current location:" + scriptDir
-println "Current user location:" + System.properties['user.dir']
-println "Current base directory:" + "${properties['basedir']}"
-println "Current prtoject build dir :" + "${properties['project.build.directory']}"
-println "Current directory:" + currentDir
+//println "Current location:" + scriptDir
+//println "Current user location:" + System.properties['user.dir']
+//println "Current base directory:" + "${properties['basedir']}"
+//println "Current prtoject build dir :" + "${properties['project.build.directory']}"
+//println "Current directory:" + currentDir
 
 ConnectionInfo connectionInfo = new ConnectionInfo(userName,
                                                    password,

@@ -117,12 +117,7 @@ public class MetadataTypes {
 
         //Run describe
         String describeFileName = describeDirName + "/describe.metadata";
-        println "DescribeMetadata call commented out!"
-        println "DescribeMetadata VARS"
-        println "connectionInfo.userName:" + connectionInfo.userName
-        println "connectionInfo.serverUrl:" + connectionInfo.serverUrl
-        println "connectionInfo.apiVersion:" + connectionInfo.apiVersion
-        println "describeFileName:" + describeFileName
+        println "DescribeMetadata call"
         antWrapper.antBuilder.describeMetadata(username: connectionInfo.userName,
                                                password: connectionInfo.password,
                                                serverurl: connectionInfo.serverUrl,
@@ -130,7 +125,7 @@ public class MetadataTypes {
                                                apiVersion: connectionInfo.apiVersion,
                                                trace: "false")
 
-        println "DescribeMetadata after call"
+        println "DescribeMetadata call finished"
 
         //Read describe result file
         File describeFile = new File(describeFileName)
@@ -181,7 +176,7 @@ public class MetadataTypes {
                             childObjectMetadataType.parentXMLName = metadataType.xmlName
                             if ( !metadataFilter.filterByMetadataTypes(childObjectMetadataType) ) {
                                 metadataTypes.put(childObjectMetadataTypeName, childObjectMetadataType);
-                                println "184 metadataTypes.put:" + childObjectMetadataTypeName + " : " + childObjectMetadataType
+                                println "metadataTypes:" + childObjectMetadataTypeName
                             }
                         }
                     }
@@ -196,7 +191,7 @@ public class MetadataTypes {
                     dirName2XmlName.put(metadataType.dirName, metadataType.xmlName)
                 }
                 metadataTypes.put(metadataType.xmlName, metadataType);
-                println "199 metadataTypes.put:" + metadataType.xmlName + " : " + metadataType
+                println "metadataTypes:" + metadataType.xmlName
             }
         }
         metadataType = null

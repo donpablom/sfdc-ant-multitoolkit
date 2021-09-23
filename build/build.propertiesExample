@@ -1,24 +1,59 @@
-sf.username = 
-sf.password = 
-sf.serverurl = 
-component.src= ./src
-b2b_toolkit_dir = ../../b2b_toolkit
-org=env
+#sf.username = < username >
+sf.username =
+
+#sf.password = < password + token>
+sf.password =
+
+#sf.serverurl = < https\://environmentName.my.salesforce.com > for production
+#sf.serverurl = < https\://test.my.salesforce.com >  for test envs
+sf.serverurl =
+
+#sf.apiversion= <Api version used for generating packages>
 sf.apiversion= 52.0
+
+# Total maximum deployment time equals sf.maxpool * sf.poolwaitmillis
+#sf.maxpoll= < maximum # of calls to check for status >
 sf.maxpoll=400
+#sf.pollwaitmillis = < # of miliseconds between calls >
 sf.pollwaitmillis = 10000
+
+# sf.testlevel Test levels for deployments, build got fallback to specific ones when not specified
 sf.testlevel=
+# flag for tests level during deployments
 run.specified.tests=false
+
+# org = organization name if needed to distinguish / usefull in multi-sandboxes environments
+org=env
+
+# source/base code directory
+component.src= ./src
+
+#b2b_toolkit_dir = ../../b2b_toolkit
+
+# boolean ;)
 prod.deploy=false
+# changes way PackageCreator gets list of modified files.
 hotfix=false
+# point a class with default tests / used for target that got RunSpecifiedTests
 deploy.default.test=
 
+# git cli
 git.executable=git
+# commit hash for incremental packages
 git.versions=
-component.deploy_delta=b2b_toolkit/build/artifact/cdelta
-component.temp_dir=b2b_toolkit/build/artifact/ctemp
-component.temp_dir_describe=b2b_toolkit/build/artifact/ctemp/describe.metadata
-component.temp_retrieve=b2b_toolkit/build/artifact/cretrieve
-component.temp_target_org_data=artifact/ctarget
-component.jsonfile=../scripts/class_exceptions.json
 
+# component specific  directories
+component.deploy_delta=sfdc-ant-multitoolkit/build/artifact/cdelta
+component.temp_dir=sfdc-ant-multitoolkit/build/artifact/ctemp
+component.temp_dir_describe=sfdc-ant-multitoolkit/build/artifact/ctemp/describe.metadata
+component.temp_retrieve=sfdc-ant-multitoolkit/build/artifact/cretrieve
+component.temp_target_org_data=sfdc-ant-multitoolkit/build/artifact/ctarget
+
+component.apexcodecoverage.filename = sfdc-ant-multitoolkit/build/artifact/ctemp/TestsCoverage.txt
+
+
+# directories of json for project specific exceptions in naming of class tests class pairs
+component.jsonfile=sfdc-ant-multitoolkit/scripts/class_exceptions.json
+
+# flag
+groovy.stacktrace.enabled=true

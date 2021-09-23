@@ -63,7 +63,7 @@ println "srcDir:" + srcDir
 
 Map<String, String> packageNodes = [:]
 Set<String> useParentDir =['aura']
-new File('b2b_toolkit/build/artifact/ctemp/deploy_delta-diff.txt').eachLine{
+new File('sfdc-ant-multitoolkit/build/artifact/ctemp/deploy_delta-diff.txt').eachLine{
     line ->
     if(line.indexOf("${srcDir}/") > 0){
         String path = line.substring(line.indexOf("${srcDir}/")+4)

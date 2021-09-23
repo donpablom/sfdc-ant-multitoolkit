@@ -101,7 +101,7 @@ public class PackageCreator {
                          println "DEBUG:: Processing ${modifiedFileName}"
 
                         // is this a special class with its own test file name?
-                        def inputFile = new File("b2b_toolkit/scripts/class_exceptions.json")
+                        def inputFile = new File("sfdc-ant-multitoolkit/scripts/class_exceptions.json")
                         def inputJSON = new JsonSlurper().parseText(inputFile.text)
 
                         specialClasses = inputJSON['exceptions'].keySet() as String[];
@@ -136,7 +136,7 @@ public class PackageCreator {
                     }
                 } else if (modifiedFileName =~ /triggers\//) {
                     // is this a special class with its own test file name?
-                    def inputFile = new File("b2b_toolkit/scripts/class_exceptions.json")
+                    def inputFile = new File("sfdc-ant-multitoolkit/scripts/class_exceptions.json")
                     def inputJSON = new JsonSlurper().parseText(inputFile.text)
 
                     specialClasses = inputJSON['exceptions'].keySet() as String[];
@@ -174,7 +174,6 @@ public class PackageCreator {
             Map<String, String> names2SrcActiveVersions = null
             modifiedSrcFileNames.each { modifiedFileName ->
              println "Handle ${modifiedFileName}"
-                println "DEBUG::: Processing modified file: ${modifiedFileName}"
                 //In case it is a metadata file, convert the name to the according normal
                 //file to make sure both are copied.
                 //Ok, this might lead to later copying files twice...
@@ -195,7 +194,7 @@ public class PackageCreator {
                     if (null != metadataType) {
                         MetadataDetail metadataDetail = new MetadataDetail(metadataType.xmlName, modifiedFileName)
                         FilterSet filterSet = metadataFilter.fileNamesFilterSet.get(metadataDetail.xmlName)
-                        println "Handle source ${source}"
+                        // cprintln "Handle source ${source}"
                         //Call directly the filter method for the file name
                         //This is because the metadataDetail is incomplete: some information like full name and manageableState
                         //cannot be set from file name.
@@ -207,9 +206,9 @@ public class PackageCreator {
                                 createParentDir(target)
 
                                 //Copy changed file
-                                println "Copy ${source} to ${target}"
+                                // println "Copy ${source} to ${target}"
                                 if (new File(source).exists()) {
-                                    println "DEBUG::: copying source file: ${source} to ${target}"
+                                    // println "DEBUG::: copying source file: ${source} to ${target}"
                                     FileTools.copyFile(source, target)
                                 } else {
                                     println "Missing file ${source}"
@@ -219,9 +218,9 @@ public class PackageCreator {
                                 if (hasMetaData(source) || source =~ /[\\\/]src[\\\/]documents[\\\/]/) {
                                     String metaSource = source + META_DATA_SUFIX
                                     String metaTarget = target + META_DATA_SUFIX
-                                    println "Copy Metadata file from ${metaSource} to ${metaTarget}"
+                                    //println "Copy Metadata file from ${metaSource} to ${metaTarget}"
                                     if (new File(metaSource).exists()) {
-                                        println "DEBUG::: Copy Metadata file from ${metaSource} to ${metaTarget}"
+                                        //println "DEBUG::: Copy Metadata file from ${metaSource} to ${metaTarget}"
                                         FileTools.copyFile(metaSource, metaTarget)
                                     } else {
                                         println "Missing file ${metaSource}"
@@ -232,7 +231,7 @@ public class PackageCreator {
                                 //Copy also the active flow for the flow definition.
                                 //In case it cannot be found, skip also the flow definition
                                 if (source =~ /flowDefinitions[\\\/]/) {
-                                    println "Trying FlowsDefinitions"
+                                    println "Handle FlowsDefinitions"
                                     //Find out the version of all active flow
                                     if (null == names2SrcActiveVersions) {
                                         names2SrcActiveVersions = FlowTools.determineActiveFlowVersions(environmentInfo.srcDir)
@@ -250,7 +249,7 @@ public class PackageCreator {
                                         String sourceFlow = environmentInfo.srcDir + "/flows/" + flowName
                                         String targetFlow = environmentInfo.targetDir + "/flows/" + flowName
                                         if (new File(sourceFlow).exists()) {
-                                            println "Found flow ${flowName} for flow definition ${flowBaseName} and version ${activeVersion}"
+                                            //println "Found flow ${flowName} for flow definition ${flowBaseName} and version ${activeVersion}"
                                             FileTools.copyFile(sourceFlow, targetFlow)
                                         } else {
                                             println "WARNING!::: Missing flow file for flow ${flowBaseName} and active version ${activeVersion}, skip also flow definition ${source}"
@@ -266,6 +265,7 @@ public class PackageCreator {
                                 //If the active flow version could not be determined (no flow definition found), delete the flow version
                                 //In the active flow version is another than the version of the flow to handle, delete the flow version.
                                 if (source =~ /[\\\/]flows[\\\/]/) {
+                                    println "Handle FlowsDefinitions"
                                     //Find out the version of all active flow
                                     if (null == names2SrcActiveVersions) {
                                         names2SrcActiveVersions = FlowTools.determineActiveFlowVersions(environmentInfo.srcDir)
@@ -278,7 +278,7 @@ public class PackageCreator {
                                         String sourceFlowDef = environmentInfo.srcDir + "/flowDefinitions/" + flowDefinitionName
                                         String targetFlowDef = environmentInfo.targetDir + "/flowDefinitions/" + flowDefinitionName
                                         if (new File(sourceFlowDef).exists()) {
-                                            println "Found flow definition ${flowDefinitionName} for flow definition ${flowBaseName} and version ${activeVersion}"
+                                            //println "Found flow definition ${flowDefinitionName} for flow definition ${flowBaseName} and version ${activeVersion}"
                                             FileTools.copyFile(sourceFlowDef, targetFlowDef)
                                         } else {
                                             println "WARNING!::: Missing flow definition file for flow ${flowBaseName} - copy only flow ${source}"

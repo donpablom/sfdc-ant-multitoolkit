@@ -15,16 +15,16 @@ public class AntWrapper {
      * @return
      */
     public AntWrapper() {
-        println "START: ANT WRAPPER"
+        println "AntWrapper start"
 
         if ( null == antBuilder ) {
             antBuilder = new AntBuilder()
             antBuilder.taskdef(resource: "com/salesforce/antlib.xml"){
                 classpath() {
-                    pathelement(location: "./b2b_toolkit/lib/ant-salesforce.jar")
+                    pathelement(location: "./sfdc-ant-multitoolkit/lib/ant-salesforce.jar")
                 }
             }
         }
-        println "END: ANT WRAPPER"
+        println "AntWrapper end"
     }
 }
